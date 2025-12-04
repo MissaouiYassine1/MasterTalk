@@ -504,6 +504,7 @@ def render_sidebar() -> str:
             st.image("https://img.icons8.com/color/96/000000/conference.png", width=80)
         
         st.title("🎤 MasterTalk")
+        st.subheader("Par: MISSAOUI Yassine")
         st.markdown("---")
         
         st.subheader("Navigation")
