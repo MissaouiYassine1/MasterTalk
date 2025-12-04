@@ -21,29 +21,43 @@ def load_custom_css():
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600;700&display=swap');
         
-        /* Variables de couleurs */
+        /* ===== FORCER LE THÈME CLAIR ===== */
         :root {
-            --bg-primary: #f8fafc;          /* Bleu ciel très clair */
-            --bg-secondary: #e0f2fe;        /* Bleu clair professionnel */
-            --bg-sidebar: #f0f9ff;          /* Bleu très pâle pour sidebar */
+            color-scheme: light !important;
+        }
+        
+        /* ===== VARIABLES DE COULEURS - REVISÉES POUR FOND BLANC ===== */
+        :root {
+            --bg-primary: #ffffff;          /* CHANGÉ : Blanc pur */
+            --bg-secondary: #f8fafc;        /* CHANGÉ : Bleu très très clair */
+            --bg-sidebar: #f0f9ff;          /* Gardé : Bleu très pâle pour sidebar */
             --card-bg: #ffffff;             /* Blanc pur pour contraste */
             --text-primary: #1e293b;        /* Bleu foncé/slate pour texte principal */
             --text-secondary: #334155;      /* Bleu gris pour texte secondaire */
             --accent-primary: #0ea5e9;      /* Bleu ciel vif pour accents */
             --accent-secondary: #0284c7;    /* Bleu plus foncé pour hover */
-            --border-color: #cbd5e1;        /* Gris bleu clair pour bordures */
+            --border-color: #e2e8f0;        /* CHANGÉ : Gris bleu plus clair */
             --success-color: #10b981;       /* Vert émeraude */
             --warning-color: #f59e0b;       /* Ambre */
             --shadow-light: 0 2px 8px rgba(0, 107, 179, 0.05);
             --shadow-medium: 0 4px 12px rgba(0, 107, 179, 0.08);
         }
         
-        /* Application des couleurs globales */
+        /* ===== FORCER LE FOND BLANC SUR TOUTE L'APPLICATION ===== */
         .stApp {
-            background-color: var(--bg-primary);
+            background-color: var(--bg-primary) !important;
         }
         
-        /* Sidebar stylisée */
+        /* Conteneurs principaux Streamlit */
+        [data-testid="stAppViewContainer"],
+        [data-testid="stAppViewContainer"] > div,
+        .main > div,
+        div.block-container,
+        div[data-testid="stHorizontalBlock"] {
+            background-color: var(--bg-primary) !important;
+        }
+        
+        /* ===== SIDEBAR ===== */
         section[data-testid="stSidebar"] {
             background-color: var(--bg-sidebar) !important;
             border-right: 1px solid var(--border-color);
@@ -59,19 +73,18 @@ def load_custom_css():
             background-color: var(--accent-secondary);
         }
         
-        /* Texte global */
+        /* ===== TYPOGRAPHIE ===== */
         * {
             font-family: 'Montserrat', sans-serif;
             color: var(--text-primary);
         }
         
-        /* Titres */
         h1, h2, h3, h4 {
             color: var(--text-primary);
             font-weight: 600;
         }
         
-        /* En-tête principal */
+        /* ===== EN-TÊTE PRINCIPAL ===== */
         .main-header {
             background: linear-gradient(135deg, var(--accent-primary) 0%, #38bdf8 100%);
             color: white !important;
@@ -88,7 +101,7 @@ def load_custom_css():
             text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
         }
         
-        /* Cartes de section */
+        /* ===== CARTES DE SECTION ===== */
         .section-card {
             background: var(--card-bg);
             padding: 2rem;
@@ -106,9 +119,9 @@ def load_custom_css():
             border-left: 4px solid var(--accent-secondary);
         }
         
-        /* Boîtes de transition */
+        /* ===== BOÎTES DE TRANSITION ===== */
         .transition-box {
-            background: linear-gradient(90deg, #e0f2fe 0%, #bae6fd 100%);
+            background: linear-gradient(90deg, #f0f9ff 0%, #e0f2fe 100%) !important;
             color: var(--text-primary);
             padding: 1.2rem;
             border-radius: 10px;
@@ -120,9 +133,9 @@ def load_custom_css():
             border: 1px solid var(--border-color);
         }
         
-        /* Cartes d'atelier */
+        /* ===== CARTES D'ATELIER ===== */
         .atelier-card {
-            background: var(--bg-secondary);
+            background: #f8fafc !important;
             padding: 1.8rem;
             border-radius: 12px;
             margin: 1rem 0;
@@ -131,33 +144,33 @@ def load_custom_css():
         }
         
         .atelier-card:hover {
-            background: #dbeafe;
+            background: #e0f2fe !important;
             transform: translateX(5px);
         }
         
         .atelier-rouge { 
             border-left: 4px solid #ef4444;
-            background: linear-gradient(90deg, #fee2e2 0%, var(--bg-secondary) 100%);
+            background: linear-gradient(90deg, #fee2e2 0%, #f8fafc 100%) !important;
         }
         
         .atelier-bleu { 
             border-left: 4px solid #3b82f6;
-            background: linear-gradient(90deg, #dbeafe 0%, var(--bg-secondary) 100%);
+            background: linear-gradient(90deg, #dbeafe 0%, #f8fafc 100%) !important;
         }
         
         .atelier-vert { 
             border-left: 4px solid var(--success-color);
-            background: linear-gradient(90deg, #d1fae5 0%, var(--bg-secondary) 100%);
+            background: linear-gradient(90deg, #d1fae5 0%, #f8fafc 100%) !important;
         }
         
         .atelier-jaune { 
             border-left: 4px solid var(--warning-color);
-            background: linear-gradient(90deg, #fef3c7 0%, var(--bg-secondary) 100%);
+            background: linear-gradient(90deg, #fef3c7 0%, #f8fafc 100%) !important;
         }
         
-        /* Points SMART */
+        /* ===== POINTS SMART ===== */
         .smart-point {
-            background: linear-gradient(90deg, #e0f2fe 0%, #f0f9ff 100%);
+            background: linear-gradient(90deg, #f8fafc 0%, #f0f9ff 100%) !important;
             padding: 1.2rem;
             border-radius: 10px;
             margin: 0.8rem 0;
@@ -170,9 +183,9 @@ def load_custom_css():
             color: var(--accent-secondary);
         }
         
-        /* Boîtes de citation */
+        /* ===== BOÎTES DE CITATION ===== */
         .quote-box {
-            background: linear-gradient(135deg, #e0f2fe 0%, #f0f9ff 100%);
+            background: linear-gradient(135deg, #f8fafc 0%, #f0f9ff 100%) !important;
             padding: 2rem;
             border-radius: 15px;
             text-align: center;
@@ -185,7 +198,7 @@ def load_custom_css():
             box-shadow: var(--shadow-light);
         }
         
-        /* Widgets Streamlit personnalisés */
+        /* ===== WIDGETS STREAMLIT PERSONNALISÉS ===== */
         .stTextInput input, .stTextArea textarea, .stSelectbox select {
             background-color: var(--card-bg) !important;
             border: 1px solid var(--border-color) !important;
@@ -210,7 +223,7 @@ def load_custom_css():
         
         /* Sliders et selectboxes */
         .stSlider div[data-baseweb="slider"] {
-            background-color: var(--bg-secondary);
+            background-color: #f8fafc;
             border-radius: 8px;
         }
         
@@ -222,7 +235,7 @@ def load_custom_css():
         
         /* Alertes et messages */
         .stAlert {
-            background-color: var(--bg-secondary);
+            background-color: #f8fafc;
             border: 1px solid var(--border-color);
             border-radius: 10px;
             color: var(--text-primary);
@@ -233,7 +246,7 @@ def load_custom_css():
             background-color: var(--accent-primary) !important;
         }
         
-        /* Responsive */
+        /* ===== RESPONSIVE ===== */
         @media (max-width: 768px) {
             .section-card {
                 padding: 1.2rem;
@@ -247,7 +260,7 @@ def load_custom_css():
             }
         }
         
-        /* Liens et éléments interactifs */
+        /* ===== LIENS ET ÉLÉMENTS INTERACTIFS ===== */
         a {
             color: var(--accent-primary) !important;
             text-decoration: none;
@@ -268,106 +281,152 @@ def load_custom_css():
             outline: 2px solid var(--accent-primary);
             outline-offset: 2px;
         }
+        
+        /* ===== SELECTBOXES STREAMLIT ===== */
         /* Conteneur principal du select (état fermé) */
-    div[data-baseweb="select"] > div {
-        background-color: #f8fafc !important;
-        border: 1px solid #cbd5e1 !important;
-        border-radius: 8px !important;
-        color: #1e293b !important;
-        min-height: 38px !important;
-    }
-    
-    /* Texte affiché dans le select */
-    div[data-baseweb="select"] div[data-testid="stMarkdownContainer"] p {
-        color: #1e293b !important;
-        font-weight: 500 !important;
-    }
-    
-    /* Icône de flèche */
-    div[data-baseweb="select"] svg {
-        fill: #64748b !important;
-    }
-    
-    /* MENU DÉROULANT QUI APPARAÎT (dropdown ouvert) */
-    div[data-baseweb="popover"] {
-        background-color: white !important;
-        border: 1px solid #cbd5e1 !important;
-        border-radius: 8px !important;
-        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1) !important;
-        margin-top: 4px !important;
-    }
-    
-    /* Liste dans le menu déroulant */
-    div[data-baseweb="popover"] ul {
-        background-color: white !important;
-        padding: 4px 0 !important;
-        border-radius: 8px !important;
-    }
-    
-    /* Options individuelles dans le menu */
-    div[data-baseweb="popover"] li {
-        background-color: white !important;
-        color: #1e293b !important;
-        padding: 8px 12px !important;
-        margin: 2px 4px !important;
-        border-radius: 6px !important;
-        font-size: 14px !important;
-        transition: all 0.2s ease !important;
-    }
-    
-    /* Option au survol */
-    div[data-baseweb="popover"] li:hover {
-        background-color: #f1f5f9 !important;
-        color: #0f172a !important;
-    }
-    
-    /* Option sélectionnée dans la liste */
-    div[data-baseweb="popover"] li[aria-selected="true"] {
-        background-color: #e0f2fe !important;
-        color: #0369a1 !important;
-        font-weight: 600 !important;
-    }
-    
-    /* Option avec focus clavier */
-    div[data-baseweb="popover"] li:focus {
-        outline: 2px solid #0ea5e9 !important;
-        outline-offset: -2px !important;
-    }
-    
-    /* Scrollbar dans le menu déroulant */
-    div[data-baseweb="popover"]::-webkit-scrollbar {
-        width: 8px !important;
-    }
-    
-    div[data-baseweb="popover"]::-webkit-scrollbar-track {
-        background: #f1f5f9 !important;
-        border-radius: 4px !important;
-    }
-    
-    div[data-baseweb="popover"]::-webkit-scrollbar-thumb {
-        background: #cbd5e1 !important;
-        border-radius: 4px !important;
-    }
-    
-    div[data-baseweb="popover"]::-webkit-scrollbar-thumb:hover {
-        background: #94a3b8 !important;
-    }
-    
-    /* État focus sur le select */
-    div[data-baseweb="select"] > div:focus-within {
-        border-color: #0ea5e9 !important;
-        box-shadow: 0 0 0 2px rgba(14, 165, 233, 0.2) !important;
-    }
-    
-    /* Style pour le placeholder */
-    div[data-baseweb="select"] input::placeholder {
-        color: #94a3b8 !important;
-    }
-    
-    /* Pour s'assurer que le texte reste visible */
-    div[data-baseweb="select"] * {
-        color: #1e293b !important;
-    }
+        div[data-baseweb="select"] > div {
+            background-color: #ffffff !important;
+            border: 1px solid var(--border-color) !important;
+            border-radius: 8px !important;
+            color: var(--text-primary) !important;
+            min-height: 38px !important;
+        }
+        
+        /* Texte affiché dans le select */
+        div[data-baseweb="select"] div[data-testid="stMarkdownContainer"] p {
+            color: var(--text-primary) !important;
+            font-weight: 500 !important;
+        }
+        
+        /* Icône de flèche */
+        div[data-baseweb="select"] svg {
+            fill: #64748b !important;
+        }
+        
+        /* MENU DÉROULANT QUI APPARAÎT (dropdown ouvert) */
+        div[data-baseweb="popover"] {
+            background-color: white !important;
+            border: 1px solid var(--border-color) !important;
+            border-radius: 8px !important;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1) !important;
+            margin-top: 4px !important;
+        }
+        
+        /* Liste dans le menu déroulant */
+        div[data-baseweb="popover"] ul {
+            background-color: white !important;
+            padding: 4px 0 !important;
+            border-radius: 8px !important;
+        }
+        
+        /* Options individuelles dans le menu */
+        div[data-baseweb="popover"] li {
+            background-color: white !important;
+            color: var(--text-primary) !important;
+            padding: 8px 12px !important;
+            margin: 2px 4px !important;
+            border-radius: 6px !important;
+            font-size: 14px !important;
+            transition: all 0.2s ease !important;
+        }
+        
+        /* Option au survol */
+        div[data-baseweb="popover"] li:hover {
+            background-color: #f1f5f9 !important;
+            color: #0f172a !important;
+        }
+        
+        /* Option sélectionnée dans la liste */
+        div[data-baseweb="popover"] li[aria-selected="true"] {
+            background-color: #e0f2fe !important;
+            color: #0369a1 !important;
+            font-weight: 600 !important;
+        }
+        
+        /* Option avec focus clavier */
+        div[data-baseweb="popover"] li:focus {
+            outline: 2px solid var(--accent-primary) !important;
+            outline-offset: -2px !important;
+        }
+        
+        /* Scrollbar dans le menu déroulant */
+        div[data-baseweb="popover"]::-webkit-scrollbar {
+            width: 8px !important;
+        }
+        
+        div[data-baseweb="popover"]::-webkit-scrollbar-track {
+            background: #f1f5f9 !important;
+            border-radius: 4px !important;
+        }
+        
+        div[data-baseweb="popover"]::-webkit-scrollbar-thumb {
+            background: var(--border-color) !important;
+            border-radius: 4px !important;
+        }
+        
+        div[data-baseweb="popover"]::-webkit-scrollbar-thumb:hover {
+            background: #94a3b8 !important;
+        }
+        
+        /* État focus sur le select */
+        div[data-baseweb="select"] > div:focus-within {
+            border-color: var(--accent-primary) !important;
+            box-shadow: 0 0 0 2px rgba(14, 165, 233, 0.2) !important;
+        }
+        
+        /* Style pour le placeholder */
+        div[data-baseweb="select"] input::placeholder {
+            color: #94a3b8 !important;
+        }
+        
+        /* Pour s'assurer que le texte reste visible */
+        div[data-baseweb="select"] * {
+            color: var(--text-primary) !important;
+        }
+        
+        /* ===== CORRECTIONS SUPPLÉMENTAIRES POUR FOND BLANC ===== */
+        
+        /* Arrière-plan des métriques */
+        [data-testid="stMetricValue"], 
+        [data-testid="stMetricLabel"],
+        [data-testid="stMetricDelta"] {
+            background-color: transparent !important;
+        }
+        
+        /* Arrière-plan des onglets */
+        .stTabs [data-baseweb="tab-list"] {
+            background-color: transparent !important;
+        }
+        
+        .stTabs [data-baseweb="tab"] {
+            background-color: #f8fafc !important;
+        }
+        
+        /* Arrière-plan des expanders */
+        .streamlit-expanderHeader {
+            background-color: #f8fafc !important;
+        }
+        
+        /* Arrière-plan des colonnes */
+        [data-testid="column"] > div {
+            background-color: transparent !important;
+        }
+        
+        /* ===== CORRECTION POUR LA ZONE AUTOUR DU CONTENU ===== */
+        /* Cette règle cible la zone grise/sombre autour du contenu principal */
+        div[data-testid="stAppViewContainer"] {
+            background: linear-gradient(135deg, #ffffff 0%, #ffffff 100%) !important;
+        }
+        
+        /* Assurer que tous les enfants directs ont aussi un fond blanc */
+        div[data-testid="stAppViewContainer"] > div {
+            background-color: #ffffff !important;
+        }
+        
+        /* Fond de la page entière */
+        html, body {
+            background-color: #ffffff !important;
+        }
                 
     </style>
     """, unsafe_allow_html=True)
