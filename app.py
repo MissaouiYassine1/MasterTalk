@@ -1,6 +1,55 @@
 import streamlit as st
 import random
 from typing import Dict, List, Tuple
+import time
+# ============================================================================
+# FONCTIONS DE PROGRESSION - AJOUTER APRÈS LES IMPORTS
+# ============================================================================
+
+def init_session_state():
+    """Initialise les états de session pour la progression"""
+    if 'visited_sections' not in st.session_state:
+        st.session_state.visited_sections = set()
+    
+    if 'current_progress' not in st.session_state:
+        st.session_state.current_progress = 0
+    
+    if 'last_section' not in st.session_state:
+        st.session_state.last_section = "Introduction"
+
+def update_progress():
+    """Met à jour la progression automatiquement"""
+    total_sections = len(SECTION_NAMES)
+    visited_count = len(st.session_state.visited_sections)
+    st.session_state.current_progress = int((visited_count / total_sections) * 100)
+
+def add_progress_to_header():
+    """Ajoute un indicateur de progression subtil dans l'en-tête"""
+    progress = st.session_state.current_progress
+    visited_count = len(st.session_state.visited_sections)
+    total_count = len(SECTION_NAMES)
+    
+    html = f"""
+    <div style="
+        position: absolute;
+        top: 20px;
+        right: 20px;
+        background: rgba(255, 255, 255, 0.95);
+        padding: 8px 16px;
+        border-radius: 20px;
+        font-size: 0.85rem;
+        color: #0ea5e9;
+        font-weight: 500;
+        border: 1px solid #e0f2fe;
+        box-shadow: 0 2px 8px rgba(14, 165, 233, 0.15);
+        z-index: 1000;
+        backdrop-filter: blur(5px);
+    ">
+        📊 Progression : {progress}% ({visited_count}/{total_count})
+    </div>
+    """
+    st.markdown(html, unsafe_allow_html=True)  
+
 
 # ============================================================================
 # CONFIGURATION ET STYLE - THÈME PROFESSIONNEL CLAIR
@@ -508,12 +557,28 @@ def render_sidebar() -> str:
         st.markdown("---")
         
         st.subheader("Navigation")
+        
+        # Trouver l'index de la dernière section visitée
+        if st.session_state.last_section in SECTION_NAMES:
+            default_index = SECTION_NAMES.index(st.session_state.last_section)
+        else:
+            default_index = 0
+            
         section = st.selectbox(
             "Choisir une section :",
             SECTION_NAMES,
             key="nav_select",
-            label_visibility="collapsed"
+            label_visibility="collapsed",
+            index=default_index
         )
+        
+        # Marquer la section comme visitée
+        if section not in st.session_state.visited_sections:
+            st.session_state.visited_sections.add(section)
+            update_progress()
+        
+        # Mettre à jour la dernière section visitée
+        st.session_state.last_section = section
         
         st.markdown("---")
         render_sidebar_sections()
@@ -543,30 +608,40 @@ def render_sidebar_sections() -> None:
     </div>
     """, unsafe_allow_html=True)
     
-    st.subheader("⏱️ Timer d'entraînement")
-    col1, col2 = st.columns(2)
-    with col1:
-        if st.button("⏸️ Pause", use_container_width=True, key="pause_btn"):
-            st.session_state.pause = True
-            st.success("Timer en pause")
-    with col2:
-        if st.button("▶️ Reprendre", use_container_width=True, key="resume_btn"):
-            st.session_state.pause = False
-            st.success("Timer repris")
 
 def render_progress_tracker() -> None:
     """Affiche le suivi de progression"""
     st.subheader("📊 Progression")
-    progress = st.slider("Votre progression", 0, 100, 25, key="progress_slider", label_visibility="collapsed")
+    
+    # Afficher le nombre de sections visitées
+    visited_count = len(st.session_state.visited_sections)
+    total_count = len(SECTION_NAMES)
+    st.caption(f"📖 Sections visitées : {visited_count}/{total_count}")
+    
+    # Afficher la barre de progression (supprimer le slider)
+    progress = st.session_state.current_progress
     st.progress(progress)
     
-    # Affichage visuel supplémentaire
-    if progress >= 75:
-        st.success(f"Excellent travail ! {progress}% complété")
+    # Affichage de l'encouragement dynamique
+    if progress >= 90:
+        st.success(f"🎉 Félicitations ! {progress}% complété - Presque terminé !")
+        st.balloons()
+    elif progress >= 75:
+        st.success(f"🌟 Excellent travail ! {progress}% complété")
     elif progress >= 50:
-        st.info(f"Bonne progression ! {progress}% complété")
+        st.info(f"📈 Bonne progression ! {progress}% complété")
+    elif progress >= 25:
+        st.info(f"🚀 Vous progressez ! {progress}% complété")
     else:
-        st.info(f"Continuez ! {progress}% complété")
+        st.info(f"✨ Continuez ! {progress}% complété")
+    
+    # Afficher les sections visitées
+    with st.expander("📋 Voir les sections complétées"):
+        for i, section_name in enumerate(SECTION_NAMES):
+            if section_name in st.session_state.visited_sections:
+                st.markdown(f"✅ **{section_name}**")
+            else:
+                st.markdown(f"⬜ {section_name}")
 
 # ============================================================================
 # SECTIONS DU CONTENU PRINCIPAL
@@ -574,6 +649,9 @@ def render_progress_tracker() -> None:
 
 def render_header() -> None:
     """Affiche l'en-tête principal avec nouveau design"""
+    # Ajouter l'indicateur de progression
+    add_progress_to_header()
+    
     st.markdown(
         '''
         <div class="main-header">
@@ -1604,35 +1682,36 @@ def star_section() -> None:
     cols = st.columns(2)
     
     with cols[0]:
-        s = st.text_area(
+        # Utiliser des clés uniques pour les widgets
+        s_input = st.text_area(
             "**Situation :**",
             "Je tremblais à l'idée de présenter en classe.",
-            key="star_s",
+            key="star_s_input",  # Clé unique pour le widget
             height=100,
             help="Décrivez le contexte initial"
         )
         
-        t = st.text_area(
+        t_input = st.text_area(
             "**Tâche :**",
             "Je devais parler 5 minutes devant 40 étudiants.",
-            key="star_t",
+            key="star_t_input",  # Clé unique pour le widget
             height=100,
             help="Quel était l'objectif ou le défi ?"
         )
     
     with cols[1]:
-        a = st.text_area(
+        a_input = st.text_area(
             "**Action :**",
             "J'ai préparé un plan simple et répété 3 fois.",
-            key="star_a",
+            key="star_a_input",  # Clé unique pour le widget
             height=100,
             help="Qu'avez-vous fait concrètement ?"
         )
         
-        r = st.text_area(
+        r_input = st.text_area(
             "**Résultat :**",
             "J'ai réussi et j'ai gagné confiance.",
-            key="star_r",
+            key="star_r_input",  # Clé unique pour le widget
             height=100,
             help="Quel a été le résultat et l'apprentissage ?"
         )
@@ -1640,39 +1719,46 @@ def star_section() -> None:
     col_btn, col_result = st.columns([1, 3])
     with col_btn:
         if st.button("📖 Générer mon histoire STAR", type="primary", use_container_width=True, key="star_generate_btn"):
-            histoire = f"""
-            ## 🌟 Votre histoire STAR complète
-            
-            **Situation :** {s}
-            
-            **Tâche :** {t}
-            
-            **Action :** {a}
-            
-            **Résultat :** {r}
-            """
-            st.session_state.star_story = histoire
+            # Stocker les valeurs dans session state avec des noms différents
+            st.session_state.star_s_value = s_input
+            st.session_state.star_t_value = t_input
+            st.session_state.star_a_value = a_input
+            st.session_state.star_r_value = r_input
+            st.session_state.star_generated = True
     
     with col_result:
-        if 'star_story' in st.session_state:
+        if st.session_state.get('star_generated', False):
+            # Récupérer les valeurs du session state
+            s_val = st.session_state.get('star_s_value', '')
+            t_val = st.session_state.get('star_t_value', '')
+            a_val = st.session_state.get('star_a_value', '')
+            r_val = st.session_state.get('star_r_value', '')
+            
+            # Afficher l'histoire avec HTML complet
             st.markdown(
-                f'<div style="'
-                'background: linear-gradient(135deg, #f0f9ff 0%, #dbeafe 100%);'
-                'padding: 2rem;'
-                'border-radius: 12px;'
-                'border-left: 4px solid #3b82f6;'
-                'margin-top: 1rem;'
-                'border: 1px solid #cbd5e1;'
-                'box-shadow: 0 4px 12px rgba(59, 130, 246, 0.1);'
-                '">'
-                '<div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 1.5rem;">'
-                '<div style="font-size: 2rem; color: #3b82f6;">📖</div>'
-                '<h4 style="color: #1e293b; margin: 0;">Votre histoire est prête !</h4>'
-                '</div>'
-                f'<div style="color: #1e293b; font-size: 1.1rem; line-height: 1.8;">'
-                f'{st.session_state.star_story.replace("**", "<strong>").replace("**", "</strong>").replace("#", "")}'
-                '</div>'
-                '</div>',
+                f'''
+                <div style="
+                    background: linear-gradient(135deg, #f0f9ff 0%, #dbeafe 100%);
+                    padding: 2rem;
+                    border-radius: 12px;
+                    border-left: 4px solid #3b82f6;
+                    margin-top: 1rem;
+                    border: 1px solid #cbd5e1;
+                    box-shadow: 0 4px 12px rgba(59, 130, 246, 0.1);
+                ">
+                    <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 1.5rem;">
+                        <div style="font-size: 2rem; color: #3b82f6;">📖</div>
+                        <h4 style="color: #1e293b; margin: 0;">Votre histoire est prête !</h4>
+                    </div>
+                    <div style="color: #1e293b; font-size: 1.1rem; line-height: 1.8;">
+                        <h3 style="color: #3b82f6; margin-top: 0;">🌟 Votre histoire STAR complète</h3>
+                        <p style="margin: 1rem 0;"><strong style="color: #1d4ed8;">Situation :</strong> {s_val}</p>
+                        <p style="margin: 1rem 0;"><strong style="color: #1d4ed8;">Tâche :</strong> {t_val}</p>
+                        <p style="margin: 1rem 0;"><strong style="color: #1d4ed8;">Action :</strong> {a_val}</p>
+                        <p style="margin: 1rem 0;"><strong style="color: #1d4ed8;">Résultat :</strong> {r_val}</p>
+                    </div>
+                </div>
+                ''',
                 unsafe_allow_html=True
             )
     
@@ -3182,7 +3268,1238 @@ def render_atelier_1() -> None:
             unsafe_allow_html=True
         )
 
-# Les autres fonctions render_atelier_2, 3, 4 et conclusion_section suivraient le même pattern d'amélioration...
+def render_atelier_2() -> None:
+    """Atelier 2 : Mini-TED de 1 minute - Version avec timer fonctionnel"""
+    # En-tête de l'atelier
+    st.markdown(
+        f'<div style="'
+        'background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%);'
+        'padding: 2rem;'
+        'border-radius: 12px;'
+        'border-left: 4px solid #3b82f6;'
+        'margin-bottom: 2rem;'
+        '">'
+        '<div style="display: flex; align-items: center; gap: 1rem; margin-bottom: 1rem;">'
+        '<div style="font-size: 2rem; color: #3b82f6;">🟦</div>'
+        '<div>'
+        '<h3 style="color: #1e293b; margin: 0;">Atelier 2 : "Le Mini-TED de 1 minute"</h3>'
+        '<p style="color: #64748b; margin: 0;">Structurez un discours court et impactant</p>'
+        '</div>'
+        '</div>'
+        '<div style="background: white; padding: 1rem; border-radius: 8px; margin-top: 1rem;">'
+        '<strong style="color: #1d4ed8;">🎯 Objectif :</strong> Apprendre à structurer un discours efficace en temps limité.'
+        '</div>'
+        '</div>',
+        unsafe_allow_html=True
+    )
+    
+    col_inst1, col_inst2 = st.columns(2)
+    
+    with col_inst1:
+        st.markdown(
+            '<div style="'
+            'background: #f0f9ff;'
+            'padding: 1.5rem;'
+            'border-radius: 10px;'
+            'border-left: 4px solid #0ea5e9;'
+            '">'
+            '<h5 style="color: #0369a1; margin: 0 0 0.5rem 0;">📝 Instructions :</h5>'
+            '<ul style="color: #334155; margin: 0; padding-left: 1.2rem;">'
+            '<li>Choisissez un sujet qui vous passionne</li>'
+            '<li>Structurez votre discours en 3 parties</li>'
+            '<li>Préparez-vous à parler pendant 1 minute</li>'
+            '</ul>'
+            '</div>',
+            unsafe_allow_html=True
+        )
+    
+    with col_inst2:
+        st.markdown(
+            '<div style="'
+            'background: #d1fae5;'
+            'padding: 1.5rem;'
+            'border-radius: 10px;'
+            'border-left: 4px solid #10b981;'
+            '">'
+            '<h5 style="color: #065f46; margin: 0 0 0.5rem 0;">⏱️ Structure en 1 minute :</h5>'
+            '<p style="color: #334155; margin: 0; font-size: 0.9rem;">'
+            '• 20s : Introduction et accroche<br>'
+            '• 30s : Corps du message<br>'
+            '• 10s : Conclusion et appel à l\'action'
+            '</p>'
+            '</div>',
+            unsafe_allow_html=True
+        )
+    
+    # Sélection du sujet
+    st.markdown("### 🎯 Choisissez votre sujet")
+    
+    sujet_options = [
+        "Pourquoi apprendre une nouvelle compétence à tout âge",
+        "L'importance de sortir de sa zone de confort",
+        "Comment gérer son temps efficacement",
+        "Le pouvoir des petites habitudes quotidiennes",
+        "Votre sujet personnalisé"
+    ]
+    
+    sujet = st.selectbox(
+        "**Sélectionnez un sujet :**",
+        sujet_options,
+        key="atelier2_sujet"
+    )
+    
+    if sujet == "Votre sujet personnalisé":
+        sujet_perso = st.text_input(
+            "**Proposez votre sujet :**",
+            key="atelier2_sujet_perso",
+            placeholder="Ex: L'importance de la gratitude au quotidien"
+        )
+        if sujet_perso:
+            sujet = sujet_perso
+    
+    # Structure du discours
+    st.markdown("### 📝 Structurez votre discours")
+    
+    col_struct1, col_struct2, col_struct3 = st.columns(3)
+    
+    with col_struct1:
+        st.markdown(
+            '<div style="'
+            'background: linear-gradient(135deg, #d1fae5 0%, #a7f3d0 100%);'
+            'padding: 1.5rem;'
+            'border-radius: 10px;'
+            'text-align: center;'
+            '">'
+            '<div style="font-size: 2rem; color: #10b981;">🎯</div>'
+            '<h5 style="color: #065f46;">Introduction (20s)</h5>'
+            '</div>',
+            unsafe_allow_html=True
+        )
+        intro = st.text_area(
+            "**Accroche + idée principale :**",
+            key="atelier2_intro",
+            height=100,
+            placeholder="Ex: Saviez-vous que...\nAujourd'hui, je veux partager avec vous..."
+        )
+    
+    with col_struct2:
+        st.markdown(
+            '<div style="'
+            'background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%);'
+            'padding: 1.5rem;'
+            'border-radius: 10px;'
+            'text-align: center;'
+            '">'
+            '<div style="font-size: 2rem; color: #3b82f6;">💡</div>'
+            '<h5 style="color: #1d4ed8;">Corps (30s)</h5>'
+            '</div>',
+            unsafe_allow_html=True
+        )
+        corps = st.text_area(
+            "**Développement + arguments :**",
+            key="atelier2_corps",
+            height=100,
+            placeholder="Ex: Premièrement...\nDeuxièmement...\nEnfin..."
+        )
+    
+    with col_struct3:
+        st.markdown(
+            '<div style="'
+            'background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);'
+            'padding: 1.5rem;'
+            'border-radius: 10px;'
+            'text-align: center;'
+            '">'
+            '<div style="font-size: 2rem; color: #f59e0b;">🎬</div>'
+            '<h5 style="color: #92400e;">Conclusion (10s)</h5>'
+            '</div>',
+            unsafe_allow_html=True
+        )
+        conclusion = st.text_area(
+            "**Résumé + appel à l'action :**",
+            key="atelier2_conclusion",
+            height=100,
+            placeholder="Ex: En résumé...\nJe vous invite à..."
+        )
+    
+    # Timer et pratique - SECTION SIMPLIFIÉE SANS TIMER AUTOMATIQUE
+    st.markdown("### ⏱️ Entraînez-vous au chrono")
+    
+    # Placeholders pour l'affichage dynamique
+    timer_display = st.empty()
+    progress_display = st.empty()
+    message_display = st.empty()
+    
+    # Initialiser l'état du timer
+    if 'atelier2_timer_active' not in st.session_state:
+        st.session_state.atelier2_timer_active = False
+    if 'atelier2_time_left' not in st.session_state:
+        st.session_state.atelier2_time_left = 60
+    
+    col_timer1, col_timer2, col_timer3 = st.columns(3)
+    
+    with col_timer1:
+        start_clicked = st.button("▶️ Démarrer le timer 1min", type="primary", use_container_width=True, key="start_timer_btn2")
+        if start_clicked:
+            st.session_state.atelier2_timer_active = True
+            st.session_state.atelier2_time_left = 60
+            st.rerun()
+    
+    with col_timer2:
+        stop_clicked = st.button("⏹️ Arrêter", use_container_width=True, key="stop_timer_btn2")
+        if stop_clicked:
+            st.session_state.atelier2_timer_active = False
+            st.rerun()
+    
+    with col_timer3:
+        reset_clicked = st.button("🔄 Recommencer", use_container_width=True, key="reset_timer_btn2")
+        if reset_clicked:
+            st.session_state.atelier2_timer_active = False
+            st.session_state.atelier2_time_left = 60
+            st.rerun()
+    
+    # Afficher le timer
+    if st.session_state.atelier2_timer_active:
+        # Calculer les minutes et secondes
+        minutes = st.session_state.atelier2_time_left // 60
+        seconds = st.session_state.atelier2_time_left % 60
+        
+        # Déterminer la couleur
+        if st.session_state.atelier2_time_left <= 10:
+            timer_color = "#ef4444"
+            timer_message = "⏰ **10 secondes restantes !** Préparez votre conclusion."
+        elif st.session_state.atelier2_time_left <= 30:
+            timer_color = "#f59e0b"
+            timer_message = "⏳ **30 secondes restantes !** Vous êtes dans le corps du discours."
+        else:
+            timer_color = "#10b981"
+            timer_message = "✅ **Bon rythme !** Continuez comme ça."
+        
+        # Calculer la progression
+        progress = 1 - (st.session_state.atelier2_time_left / 60)
+        
+        # Afficher le timer
+        with timer_display.container():
+            st.markdown(
+                f'<div style="text-align: center; padding: 1.5rem; background: #f8fafc; border-radius: 12px; border: 3px solid {timer_color};">'
+                f'<div style="font-size: 3.5rem; color: {timer_color}; font-weight: bold; margin-bottom: 0.5rem;">'
+                f'{minutes:02d}:{seconds:02d}'
+                f'</div>'
+                f'<div style="color: #64748b; font-size: 1rem;">Temps restant</div>'
+                f'</div>',
+                unsafe_allow_html=True
+            )
+        
+        # Afficher la barre de progression
+        progress_display.progress(progress)
+        
+        # Afficher le message
+        message_display.info(timer_message)
+        
+        # Si le timer est actif, le décrémenter
+        if st.session_state.atelier2_time_left > 0:
+            # Ajouter un délai pour la prochaine exécution
+            time.sleep(1)
+            st.session_state.atelier2_time_left -= 1
+            st.rerun()
+        else:
+            # Timer terminé
+            st.session_state.atelier2_timer_active = False
+            st.success("🎉 **Temps écoulé !** Excellent travail !")
+            st.balloons()
+            timer_display.empty()
+            progress_display.empty()
+            message_display.empty()
+    else:
+        # Afficher l'état initial
+        with timer_display.container():
+            if st.session_state.atelier2_time_left < 60:
+                minutes = st.session_state.atelier2_time_left // 60
+                seconds = st.session_state.atelier2_time_left % 60
+                st.markdown(
+                    f'<div style="text-align: center; padding: 1.5rem; background: #f8fafc; border-radius: 12px; border: 2px solid #94a3b8;">'
+                    f'<div style="font-size: 3rem; color: #64748b; font-weight: bold; margin-bottom: 0.5rem;">'
+                    f'{minutes:02d}:{seconds:02d}'
+                    f'</div>'
+                    f'<div style="color: #94a3b8; font-size: 0.9rem;">Timer en pause</div>'
+                    f'</div>',
+                    unsafe_allow_html=True
+                )
+    
+    # Guide de structure
+    if st.button("📋 Afficher le guide de structure", key="show_guide_btn2"):
+        st.session_state.show_guide_atelier2 = not st.session_state.get('show_guide_atelier2', False)
+    
+    if st.session_state.get('show_guide_atelier2', False):
+        st.markdown(
+            '<div style="'
+            'background: #f0f9ff;'
+            'padding: 1.5rem;'
+            'border-radius: 10px;'
+            'margin-top: 1rem;'
+            'border-left: 4px solid #0ea5e9;'
+            '">'
+            '<h5 style="color: #0369a1; margin: 0 0 0.5rem 0;">📋 Guide de structure (1 minute) :</h5>'
+            '<div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 1rem;">'
+            '<div>'
+            '<strong>🎯 Introduction (20s)</strong><br>'
+            '• Accroche percutante<br>'
+            '• Présentation du sujet<br>'
+            '• Annonce du plan'
+            '</div>'
+            '<div>'
+            '<strong>💡 Corps (30s)</strong><br>'
+            '• 1er point principal<br>'
+            '• 2ème point principal<br>'
+            '• Exemple concret'
+            '</div>'
+            '<div>'
+            '<strong>🎬 Conclusion (10s)</strong><br>'
+            '• Résumé des points<br>'
+            '• Message clé<br>'
+            '• Appel à l\'action'
+            '</div>'
+            '</div>'
+            '</div>',
+            unsafe_allow_html=True
+        )
+    
+    # Feedback automatique
+    if intro and corps and conclusion:
+        st.markdown("### 📊 Votre feedback")
+        
+        # Analyse de la structure
+        mots_intro = len(intro.split())
+        mots_corps = len(corps.split())
+        mots_conclu = len(conclusion.split())
+        total_mots = mots_intro + mots_corps + mots_conclu
+        
+        col_fb1, col_fb2, col_fb3 = st.columns(3)
+        
+        with col_fb1:
+            st.metric("Introduction", f"{mots_intro} mots")
+            if mots_intro < 40:
+                st.success("✅ Parfait pour 20s")
+            elif mots_intro < 60:
+                st.warning("⚠️ Un peu long pour 20s")
+            else:
+                st.error("❌ Trop long pour 20s")
+        
+        with col_fb2:
+            st.metric("Corps", f"{mots_corps} mots")
+            if 50 < mots_corps < 80:
+                st.success("✅ Idéal pour 30s")
+            elif mots_corps < 50:
+                st.warning("⚠️ Pourrait être plus développé")
+            else:
+                st.error("❌ Trop dense pour 30s")
+        
+        with col_fb3:
+            st.metric("Conclusion", f"{mots_conclu} mots")
+            if mots_conclu < 25:
+                st.success("✅ Parfait pour 10s")
+            elif mots_conclu < 35:
+                st.warning("⚠️ Un peu long pour 10s")
+            else:
+                st.error("❌ Trop long pour 10s")
+        
+        # Conseils personnalisés
+        if total_mots < 120:
+            st.info("💡 **Conseil :** Votre discours est un peu court. Ajoutez des exemples ou des détails pour enrichir votre message.")
+        elif total_mots > 200:
+            st.info("💡 **Conseil :** Votre discours est trop long pour 1 minute. Simplifiez et concentrez-vous sur l'essentiel.")
+        else:
+            st.success("🎯 **Excellent !** Votre structure est bien équilibrée pour 1 minute.")
+    
+    st.markdown("---")
+    
+    # Exemples de discours réussis
+    st.markdown("### 📚 Exemples de discours 1 minute")
+    
+    with st.expander("📖 Voir des exemples réussis"):
+        col_ex1, col_ex2 = st.columns(2)
+        
+        with col_ex1:
+            st.markdown(
+                '<div style="'
+                'background: #f0f9ff;'
+                'padding: 1.5rem;'
+                'border-radius: 10px;'
+                '">'
+                '<h5 style="color: #0369a1;">💡 Exemple 1 : "Le pouvoir des petites habitudes"</h5>'
+                '<p style="color: #334155; font-size: 0.9rem;">'
+                '<strong>Introduction (20s):</strong> Imaginez améliorer votre vie 1% chaque jour...<br><br>'
+                '<strong>Corps (30s):</strong> Une petite habitude quotidienne, comme lire 10 pages, peut transformer votre année...<br><br>'
+                '<strong>Conclusion (10s):</strong> Commencez aujourd\'hui avec une micro-habitude !'
+                '</p>'
+                '</div>',
+                unsafe_allow_html=True
+            )
+        
+        with col_ex2:
+            st.markdown(
+                '<div style="'
+                'background: #f0f9ff;'
+                'padding: 1.5rem;'
+                'border-radius: 10px;'
+                '">'
+                '<h5 style="color: #0369a1;">🎯 Exemple 2 : "Sortir de sa zone de confort"</h5>'
+                '<p style="color: #334155; font-size: 0.9rem;">'
+                '<strong>Introduction (20s):</strong> La zone de confort est douce mais elle ne fait pas grandir...<br><br>'
+                '<strong>Corps (30s):</strong> Chaque défi relevé renforce la confiance et ouvre de nouvelles portes...<br><br>'
+                '<strong>Conclusion (10s):</strong> Osez un petit pas hors de votre routine aujourd\'hui !'
+                '</p>'
+                '</div>',
+                unsafe_allow_html=True
+            )
+
+def render_atelier_3() -> None:
+    """Atelier 3 : Jeu de rôle Pour ou Contre - Version avec timer fonctionnel"""
+    # En-tête de l'atelier
+    st.markdown(
+        f'<div style="'
+        'background: linear-gradient(135deg, #d1fae5 0%, #a7f3d0 100%);'
+        'padding: 2rem;'
+        'border-radius: 12px;'
+        'border-left: 4px solid #10b981;'
+        'margin-bottom: 2rem;'
+        '">'
+        '<div style="display: flex; align-items: center; gap: 1rem; margin-bottom: 1rem;">'
+        '<div style="font-size: 2rem; color: #10b981;">🟩</div>'
+        '<div>'
+        '<h3 style="color: #1e293b; margin: 0;">Atelier 3 : "Jeu de rôle Pour ou Contre ?"</h3>'
+        '<p style="color: #64748b; margin: 0;">Développez vos compétences d\'argumentation</p>'
+        '</div>'
+        '</div>'
+        '<div style="background: white; padding: 1rem; border-radius: 8px; margin-top: 1rem;">'
+        '<strong style="color: #065f46;">🎯 Objectif :</strong> Apprendre à argumenter efficacement, même sur des positions qui ne sont pas les vôtres.'
+        '</div>'
+        '</div>',
+        unsafe_allow_html=True
+    )
+    
+    col_inst1, col_inst2 = st.columns(2)
+    
+    with col_inst1:
+        st.markdown(
+            '<div style="'
+            'background: #f0f9ff;'
+            'padding: 1.5rem;'
+            'border-radius: 10px;'
+            'border-left: 4px solid #0ea5e9;'
+            '">'
+            '<h5 style="color: #0369a1; margin: 0 0 0.5rem 0;">📝 Instructions :</h5>'
+            '<ul style="color: #334155; margin: 0; padding-left: 1.2rem;">'
+            '<li>Un sujet controversé vous est attribué</li>'
+            '<li>Une position (Pour/Contre) vous est assignée</li>'
+            '<li>Préparez 3 arguments solides en 2 minutes</li>'
+            '</ul>'
+            '</div>',
+            unsafe_allow_html=True
+        )
+    
+    with col_inst2:
+        st.markdown(
+            '<div style="'
+            'background: #fee2e2;'
+            'padding: 1.5rem;'
+            'border-radius: 10px;'
+            'border-left: 4px solid #ef4444;'
+            '">'
+            '<h5 style="color: #dc2626; margin: 0 0 0.5rem 0;">💪 Défi :</h5>'
+            '<p style="color: #334155; margin: 0; font-size: 0.9rem;">'
+            'Vous devez défendre une position même si elle ne correspond pas à votre opinion personnelle.'
+            '</p>'
+            '</div>',
+            unsafe_allow_html=True
+        )
+    
+    # Sélection aléatoire du sujet et position
+    st.markdown("### 🎲 Lancez le défi !")
+    
+    col_challenge1, col_challenge2, col_challenge3 = st.columns([1, 2, 1])
+    
+    with col_challenge2:
+        if st.button("🎯 Générer un défi", type="primary", use_container_width=True, key="generate_challenge_btn"):
+            # Sélection aléatoire
+            sujet_debat = random.choice(DEBATE_TOPICS)
+            position = random.choice(["POUR", "CONTRE"])
+            
+            st.session_state.debat_sujet = sujet_debat
+            st.session_state.debat_position = position
+            # Réinitialiser le timer
+            st.session_state.atelier3_timer_active = False
+            st.session_state.atelier3_time_left = 120
+            st.rerun()
+    
+    # Affichage du défi
+    if st.session_state.get('debat_sujet', False):
+        col_display1, col_display2, col_display3 = st.columns([1, 2, 1])
+        
+        with col_display2:
+            position_color = "#10b981" if st.session_state.debat_position == "POUR" else "#ef4444"
+            st.markdown(
+                f'<div style="'
+                'background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%);'
+                'padding: 2rem;'
+                'border-radius: 12px;'
+                'text-align: center;'
+                'border: 1px solid #cbd5e1;'
+                'margin: 1rem 0;'
+                '">'
+                f'<div style="font-size: 2rem; color: {position_color}; margin-bottom: 1rem;">{"✅" if st.session_state.debat_position == "POUR" else "❌"}</div>'
+                f'<h4 style="color: #1e293b; margin: 0 0 0.5rem 0;">{st.session_state.debat_sujet}</h4>'
+                f'<div style="background: {"#d1fae5" if st.session_state.debat_position == "POUR" else "#fee2e2"}; '
+                f'padding: 0.5rem 1rem; border-radius: 20px; display: inline-block; margin-top: 0.5rem;">'
+                f'<strong style="color: {"#065f46" if st.session_state.debat_position == "POUR" else "#dc2626"};">'
+                f'Position : {st.session_state.debat_position}'
+                f'</strong></div>'
+                '</div>',
+                unsafe_allow_html=True
+            )
+        
+        # Timer de préparation - SECTION SIMPLIFIÉE
+        st.markdown("### ⏱️ Temps de préparation : 2 minutes")
+        
+        # Initialiser l'état du timer
+        if 'atelier3_timer_active' not in st.session_state:
+            st.session_state.atelier3_timer_active = False
+        if 'atelier3_time_left' not in st.session_state:
+            st.session_state.atelier3_time_left = 120
+        
+        # Placeholders pour l'affichage
+        timer_display3 = st.empty()
+        progress_display3 = st.empty()
+        message_display3 = st.empty()
+        
+        col_timer1, col_timer2, col_timer3 = st.columns(3)
+        
+        with col_timer1:
+            start_timer3 = st.button("▶️ Démarrer timer 2min", type="primary", use_container_width=True, key="start_timer3")
+            if start_timer3:
+                st.session_state.atelier3_timer_active = True
+                st.session_state.atelier3_time_left = 120
+                st.rerun()
+        
+        with col_timer2:
+            stop_timer3 = st.button("⏹️ Arrêter", use_container_width=True, key="stop_timer3")
+            if stop_timer3:
+                st.session_state.atelier3_timer_active = False
+                st.rerun()
+        
+        with col_timer3:
+            reset_timer3 = st.button("🔄 Redémarrer", use_container_width=True, key="reset_timer3")
+            if reset_timer3:
+                st.session_state.atelier3_timer_active = False
+                st.session_state.atelier3_time_left = 120
+                st.rerun()
+        
+        # Afficher et gérer le timer
+        if st.session_state.atelier3_timer_active:
+            # Calculer les minutes et secondes
+            minutes = st.session_state.atelier3_time_left // 60
+            seconds = st.session_state.atelier3_time_left % 60
+            
+            # Déterminer la couleur et le message
+            if st.session_state.atelier3_time_left <= 30:
+                timer_color = "#ef4444"
+                timer_message = "⏰ **30 secondes restantes !** Finalisez vos arguments."
+            elif st.session_state.atelier3_time_left <= 60:
+                timer_color = "#f59e0b"
+                timer_message = "⏳ **1 minute restante !** Structurez vos arguments principaux."
+            else:
+                timer_color = "#10b981"
+                timer_message = "✅ **Bon début !** Prenez le temps de bien préparer vos arguments."
+            
+            # Calculer la progression
+            progress = 1 - (st.session_state.atelier3_time_left / 120)
+            
+            # Afficher le timer
+            with timer_display3.container():
+                st.markdown(
+                    f'<div style="text-align: center; padding: 1.5rem; background: #f8fafc; border-radius: 12px; border: 3px solid {timer_color};">'
+                    f'<div style="font-size: 3.5rem; color: {timer_color}; font-weight: bold; margin-bottom: 0.5rem;">'
+                    f'{minutes:02d}:{seconds:02d}'
+                    f'</div>'
+                    f'<div style="color: #64748b; font-size: 1rem;">Temps de préparation restant</div>'
+                    f'</div>',
+                    unsafe_allow_html=True
+                )
+            
+            # Afficher la barre de progression
+            progress_display3.progress(progress)
+            
+            # Afficher le message
+            message_display3.info(timer_message)
+            
+            # Décrémenter le timer
+            if st.session_state.atelier3_time_left > 0:
+                time.sleep(1)
+                st.session_state.atelier3_time_left -= 1
+                st.rerun()
+            else:
+                # Timer terminé
+                st.session_state.atelier3_timer_active = False
+                st.success("✅ **Temps écoulé !** Préparez-vous à présenter vos arguments.")
+                timer_display3.empty()
+                progress_display3.empty()
+                message_display3.empty()
+        else:
+            # Afficher l'état initial ou en pause
+            if st.session_state.atelier3_time_left < 120:
+                minutes = st.session_state.atelier3_time_left // 60
+                seconds = st.session_state.atelier3_time_left % 60
+                with timer_display3.container():
+                    st.markdown(
+                        f'<div style="text-align: center; padding: 1.5rem; background: #f8fafc; border-radius: 12px; border: 2px solid #94a3b8;">'
+                        f'<div style="font-size: 3rem; color: #64748b; font-weight: bold; margin-bottom: 0.5rem;">'
+                        f'{minutes:02d}:{seconds:02d}'
+                        f'</div>'
+                        f'<div style="color: #94a3b8; font-size: 0.9rem;">Timer en pause</div>'
+                        f'</div>',
+                        unsafe_allow_html=True
+                    )
+    
+    # Zone de préparation des arguments
+    st.markdown("### 💡 Préparez vos arguments")
+    
+    col_arg1, col_arg2, col_arg3 = st.columns(3)
+    
+    with col_arg1:
+        st.markdown(
+            '<div style="'
+            'background: linear-gradient(135deg, #d1fae5 0%, #a7f3d0 100%);'
+            'padding: 1.5rem;'
+            'border-radius: 10px;'
+            'text-align: center;'
+            'margin-bottom: 1rem;'
+            '">'
+            '<div style="font-size: 2rem; color: #10b981;">1️⃣</div>'
+            '<h5 style="color: #065f46;">Argument principal</h5>'
+            '</div>',
+            unsafe_allow_html=True
+        )
+        arg1 = st.text_area(
+            "**Votre argument le plus fort :**",
+            key="arg1",
+            height=100,
+            placeholder="Ex: Cet avantage majeur change complètement la situation..."
+        )
+    
+    with col_arg2:
+        st.markdown(
+            '<div style="'
+            'background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%);'
+            'padding: 1.5rem;'
+            'border-radius: 10px;'
+            'text-align: center;'
+            'margin-bottom: 1rem;'
+            '">'
+            '<div style="font-size: 2rem; color: #3b82f6;">2️⃣</div>'
+            '<h5 style="color: #1d4ed8;">Second argument</h5>'
+            '</div>',
+            unsafe_allow_html=True
+        )
+        arg2 = st.text_area(
+            "**Un argument complémentaire :**",
+            key="arg2",
+            height=100,
+            placeholder="Ex: Les études montrent que..."
+        )
+    
+    with col_arg3:
+        st.markdown(
+            '<div style="'
+            'background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);'
+            'padding: 1.5rem;'
+            'border-radius: 10px;'
+            'text-align: center;'
+            'margin-bottom: 1rem;'
+            '">'
+            '<div style="font-size: 2rem; color: #f59e0b;">3️⃣</div>'
+            '<h5 style="color: #92400e;">Troisième argument</h5>'
+            '</div>',
+            unsafe_allow_html=True
+        )
+        arg3 = st.text_area(
+            "**Un dernier point important :**",
+            key="arg3",
+            height=100,
+            placeholder="Ex: Sans oublier que cela permet aussi..."
+        )
+    
+    # Zone de contre-arguments
+    st.markdown("### 🛡️ Anticipez les objections")
+    
+    contre_arg = st.text_area(
+        "**Quelles objections votre adversaire pourrait-il soulever ?**",
+        key="contre_arg",
+        height=100,
+        placeholder="Ex: On pourrait me dire que...\nJe répondrai que..."
+    )
+    
+    # Validation et feedback
+    if arg1 and arg2 and arg3:
+        st.markdown("### 📊 Analyse de vos arguments")
+        
+        col_ana1, col_ana2, col_ana3 = st.columns(3)
+        
+        with col_ana1:
+            mots_arg1 = len(arg1.split())
+            st.metric("Argument 1", f"{mots_arg1} mots")
+            if mots_arg1 > 30:
+                st.success("✅ Détail suffisant")
+            else:
+                st.warning("⚠️ Pourrait être plus développé")
+        
+        with col_ana2:
+            mots_arg2 = len(arg2.split())
+            st.metric("Argument 2", f"{mots_arg2} mots")
+            if mots_arg2 > 20:
+                st.success("✅ Bon équilibre")
+            else:
+                st.warning("⚠️ Un peu court")
+        
+        with col_ana3:
+            mots_arg3 = len(arg3.split())
+            st.metric("Argument 3", f"{mots_arg3} mots")
+            if mots_arg3 > 15:
+                st.success("✅ Suffisamment élaboré")
+            else:
+                st.info("💡 Pourrait être renforcé")
+        
+        # Types d'arguments détectés
+        types_args = []
+        if "étude" in arg1.lower() or "statistique" in arg1.lower() or "recherche" in arg1.lower():
+            types_args.append("📊 Argument scientifique")
+        if "exemple" in arg1.lower() or "cas" in arg1.lower() or "histoire" in arg1.lower():
+            types_args.append("📖 Argument par l'exemple")
+        if "logique" in arg1.lower() or "donc" in arg1.lower() or "parce que" in arg1.lower():
+            types_args.append("🧠 Argument logique")
+        
+        if types_args:
+            st.info(f"💡 **Types d'arguments utilisés :** {', '.join(types_args)}")
+        
+        # Force de persuasion
+        force_score = 0
+        if len(arg1.split()) > 25: force_score += 1
+        if len(arg2.split()) > 20: force_score += 1
+        if len(arg3.split()) > 15: force_score += 1
+        if contre_arg: force_score += 2
+        
+        col_force1, col_force2 = st.columns([2, 1])
+        with col_force1:
+            if force_score >= 4:
+                st.success("🎯 **Excellent !** Vos arguments sont solides et bien préparés.")
+            elif force_score >= 2:
+                st.info("📈 **Bon travail !** Vos arguments sont bien structurés.")
+            else:
+                st.warning("💪 **Continuez !** Développez davantage vos arguments.")
+        
+        with col_force2:
+            st.metric("Score de persuasion", f"{force_score}/5")
+    
+    # Section d'entraînement
+    st.markdown("### 🎭 Entraînement au contre-argument")
+    
+    if st.button("🔄 S'entraîner avec un contre-argument", key="counter_training_btn"):
+        contre_exemples = [
+            "Mais cette solution est trop coûteuse à mettre en œuvre.",
+            "Et si cette approche créait plus de problèmes qu'elle n'en résout ?",
+            "Vous oubliez de considérer l'impact sur les plus vulnérables.",
+            "Cela a déjà été tenté et cela n'a pas fonctionné."
+        ]
+        st.session_state.contre_exemple = random.choice(contre_exemples)
+    
+    if st.session_state.get('contre_exemple', False):
+        col_ce1, col_ce2 = st.columns([2, 1])
+        with col_ce1:
+            st.markdown(
+                f'<div style="'
+                'background: #fee2e2;'
+                'padding: 1.5rem;'
+                'border-radius: 10px;'
+                'border-left: 4px solid #ef4444;'
+                '">'
+                f'<h5 style="color: #dc2626; margin: 0 0 0.5rem 0;">Contre-argument à réfuter :</h5>'
+                f'<p style="color: #334155; margin: 0;">"{st.session_state.contre_exemple}"</p>'
+                '</div>',
+                unsafe_allow_html=True
+            )
+        
+        with col_ce2:
+            reponse = st.text_area(
+                "**Votre réfutation :**",
+                key="reponse_contre",
+                height=100,
+                placeholder="Ex: Je comprends cette objection, mais..."
+            )
+            
+            if reponse:
+                st.success("✅ Bonne réfutation !")
+    
+    st.markdown("---")
+    
+    # Conseils pour bien argumenter
+    with st.expander("💡 Conseils pour un débat efficace"):
+        col_tips1, col_tips2 = st.columns(2)
+        
+        with col_tips1:
+            st.markdown(
+                '''
+                **🎯 Structurez vos arguments :**
+                • Commencez par votre point le plus fort
+                • Utilisez des faits et des exemples
+                • Liez chaque argument à votre thèse principale
+                
+                **🗣️ Technique de parole :**
+                • Parlez lentement et clairement
+                • Maintenez un contact visuel (même virtuel)
+                • Utilisez des pauses pour marquer vos points
+                '''
+            )
+        
+        with col_tips2:
+            st.markdown(
+                '''
+                **🛡️ Gestion des objections :**
+                • Écoutez attentivement le contre-argument
+                • Reconnaissez le point de vue adverse
+                • Réfutez avec des faits, pas des émotions
+                
+                **🧠 État d'esprit :**
+                • Restez calme et respectueux
+                • Concentrez-vous sur les idées, pas les personnes
+                • Apprenez de chaque échange
+                '''
+            )
+
+def render_atelier_4() -> None:
+    """Atelier 4 : L'écoute active - Version avec timer fonctionnel"""
+    # En-tête de l'atelier
+    st.markdown(
+        f'<div style="'
+        'background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);'
+        'padding: 2rem;'
+        'border-radius: 12px;'
+        'border-left: 4px solid #f59e0b;'
+        'margin-bottom: 2rem;'
+        '">'
+        '<div style="display: flex; align-items: center; gap: 1rem; margin-bottom: 1rem;">'
+        '<div style="font-size: 2rem; color: #f59e0b;">🟨</div>'
+        '<div>'
+        '<h3 style="color: #1e293b; margin: 0;">Atelier 4 : "L\'écoute active"</h3>'
+        '<p style="color: #64748b; margin: 0;">Pratiquez l\'écoute empathique et constructive</p>'
+        '</div>'
+        '</div>'
+        '<div style="background: white; padding: 1rem; border-radius: 8px; margin-top: 1rem;">'
+        '<strong style="color: #92400e;">🎯 Objectif :</strong> Développer l\'écoute active pour mieux comprendre et répondre avec empathie.'
+        '</div>'
+        '</div>',
+        unsafe_allow_html=True
+    )
+    
+    col_inst1, col_inst2 = st.columns(2)
+    
+    with col_inst1:
+        st.markdown(
+            '<div style="'
+            'background: #f0f9ff;'
+            'padding: 1.5rem;'
+            'border-radius: 10px;'
+            'border-left: 4px solid #0ea5e9;'
+            '">'
+            '<h5 style="color: #0369a1; margin: 0 0 0.5rem 0;">📝 Instructions :</h5>'
+            '<ul style="color: #334155; margin: 0; padding-left: 1.2rem;">'
+            '<li>Écoutez attentivement le message</li>'
+            '<li>Reformulez avec vos propres mots</li>'
+            '<li>Validez les émotions exprimées</li>'
+            '</ul>'
+            '</div>',
+            unsafe_allow_html=True
+        )
+    
+    with col_inst2:
+        st.markdown(
+            '<div style="'
+            'background: #d1fae5;'
+            'padding: 1.5rem;'
+            'border-radius: 10px;'
+            'border-left: 4px solid #10b981;'
+            '">'
+            '<h5 style="color: #065f46; margin: 0 0 0.5rem 0;">👂 La règle 30s/15s :</h5>'
+            '<p style="color: #334155; margin: 0; font-size: 0.9rem;">'
+            '• 30 secondes : Écouter sans interrompre<br>'
+            '• 15 secondes : Reformuler et valider'
+            '</p>'
+            '</div>',
+            unsafe_allow_html=True
+        )
+    
+    # Scénarios d'écoute active
+    st.markdown("### 🎭 Choisissez un scénario")
+    
+    scenarios = [
+        "Un collègue stressé par une deadline",
+        "Un ami qui doute de ses capacités",
+        "Un client mécontent d'un service",
+        "Un membre de l'équipe qui se sent sous-estimé",
+        "Une personne qui a peur de prendre la parole"
+    ]
+    
+    scenario = st.selectbox(
+        "**Sélectionnez un scénario :**",
+        scenarios,
+        key="atelier4_scenario"
+    )
+    
+    # Messages selon le scénario
+    messages_scenarios = {
+        "Un collègue stressé par une deadline": "Je ne vais jamais y arriver à temps. Ce projet est trop important et je crains de le rater complètement. Tout le monde compte sur moi et la pression est insupportable.",
+        "Un ami qui doute de ses capacités": "Je me demande si je suis vraiment à la hauteur. Tout le monde semble mieux réussir que moi. Peut-être que je devrais abandonner, je n'ai pas les compétences nécessaires.",
+        "Un client mécontent d'un service": "Je suis vraiment déçu par votre service. J'attends depuis une semaine et personne ne m'a tenu au courant. C'est inacceptable pour ce prix !",
+        "Un membre de l'équipe qui se sent sous-estimé": "J'ai l'impression que mes idées ne sont jamais écoutées. Je travaille dur mais on ne me donne jamais de responsabilités importantes. À quoi bon continuer ?",
+        "Une personne qui a peur de prendre la parole": "Dès que je dois parler en public, je panique. Mon cœur s'emballe, je tremble et j'oublie tout. Je me sens ridicule devant les autres."
+    }
+    
+    if scenario in messages_scenarios:
+        st.markdown("### 💬 Message à écouter")
+        
+        col_msg1, col_msg2 = st.columns([3, 1])
+        
+        with col_msg1:
+            st.markdown(
+                f'<div style="'
+                'background: linear-gradient(135deg, #e0f2fe 0%, #bae6fd 100%);'
+                'padding: 1.5rem;'
+                'border-radius: 10px;'
+                'border-left: 4px solid #0ea5e9;'
+                '">'
+                f'<p style="color: #334155; margin: 0; font-style: italic;">"{messages_scenarios[scenario]}"</p>'
+                '</div>',
+                unsafe_allow_html=True
+            )
+        
+        with col_msg2:
+            # Initialiser l'état du timer
+            if 'atelier4_timer_active' not in st.session_state:
+                st.session_state.atelier4_timer_active = False
+            if 'atelier4_time_left' not in st.session_state:
+                st.session_state.atelier4_time_left = 30
+            
+            start_listening = st.button("▶️ Lancer l'écoute (30s)", type="primary", use_container_width=True, key="start_listening_btn")
+            if start_listening:
+                st.session_state.atelier4_timer_active = True
+                st.session_state.atelier4_time_left = 30
+                st.rerun()
+    
+    # Timer d'écoute - SECTION SIMPLIFIÉE
+    if 'atelier4_timer_active' in st.session_state and st.session_state.atelier4_timer_active:
+        st.markdown("### ⏱️ Écoute en cours...")
+        
+        # Placeholders pour l'affichage
+        timer_display4 = st.empty()
+        progress_display4 = st.empty()
+        message_display4 = st.empty()
+        
+        # Contrôles du timer
+        col_control1, col_control2 = st.columns(2)
+        with col_control1:
+            stop_listening = st.button("⏹️ Arrêter l'écoute", use_container_width=True, key="stop_listening_btn")
+            if stop_listening:
+                st.session_state.atelier4_timer_active = False
+                st.rerun()
+        
+        with col_control2:
+            restart_listening = st.button("🔄 Recommencer", use_container_width=True, key="restart_listening_btn")
+            if restart_listening:
+                st.session_state.atelier4_timer_active = True
+                st.session_state.atelier4_time_left = 30
+                st.rerun()
+        
+        # Afficher et gérer le timer
+        if st.session_state.atelier4_timer_active:
+            # Calculer l'affichage
+            seconds = st.session_state.atelier4_time_left
+            
+            # Déterminer la couleur et le message
+            if seconds <= 5:
+                timer_color = "#ef4444"
+                timer_message = "👂 **5 secondes restantes !** Préparez votre reformulation."
+            elif seconds <= 15:
+                timer_color = "#f59e0b"
+                timer_message = "🧠 **15 secondes restantes !** Identifiez les émotions clés."
+            else:
+                timer_color = "#10b981"
+                timer_message = "✅ **Écoute active en cours...** Concentrez-vous sur le message."
+            
+            # Calculer la progression
+            progress = 1 - (seconds / 30)
+            
+            # Afficher le timer
+            with timer_display4.container():
+                st.markdown(
+                    f'<div style="text-align: center; padding: 1.5rem; background: #f8fafc; border-radius: 12px; border: 3px solid {timer_color};">'
+                    f'<div style="font-size: 3.5rem; color: {timer_color}; font-weight: bold; margin-bottom: 0.5rem;">'
+                    f'00:{seconds:02d}'
+                    f'</div>'
+                    f'<div style="color: #64748b; font-size: 1rem;">Temps d\'écoute restant</div>'
+                    f'</div>',
+                    unsafe_allow_html=True
+                )
+            
+            # Afficher la barre de progression
+            progress_display4.progress(progress)
+            
+            # Afficher le message
+            message_display4.info(timer_message)
+            
+            # Décrémenter le timer
+            if st.session_state.atelier4_time_left > 0:
+                time.sleep(1)
+                st.session_state.atelier4_time_left -= 1
+                st.rerun()
+            else:
+                # Timer terminé
+                st.session_state.atelier4_timer_active = False
+                st.success("✅ **Temps d'écoute terminé !** Maintenant, reformulez ce que vous avez entendu.")
+                timer_display4.empty()
+                progress_display4.empty()
+                message_display4.empty()
+    
+    # Zone de reformulation
+    st.markdown("### 🔄 Votre reformulation")
+    
+    col_reform1, col_reform2, col_reform3 = st.columns([1, 2, 1])
+    
+    with col_reform2:
+        reformulation = st.text_area(
+            "**Reformulez le message avec vos mots :**",
+            key="reformulation",
+            height=120,
+            placeholder="Ex: Si je comprends bien, tu ressens...\nCe qui te préoccupe particulièrement, c'est..."
+        )
+    
+    # Validation de la reformulation
+    if reformulation:
+        st.markdown("### 📊 Analyse de votre écoute active")
+        
+        # Vérification des éléments clés
+        elements_presents = {
+            "Reformulation": any(mot in reformulation.lower() for mot in ["si je comprends", "tu veux dire", "donc tu", "ce que tu"]),
+            "Validation émotionnelle": any(mot in reformulation.lower() for mot in ["tu te sens", "tu ressens", "c'est difficile", "ça doit être"]),
+            "Question ouverte": "?" in reformulation,
+            "Empathie": any(mot in reformulation.lower() for mot in ["je comprends", "je vois", "c'est normal", "c'est compréhensible"])
+        }
+        
+        col_check1, col_check2 = st.columns(2)
+        
+        with col_check1:
+            st.markdown("**✅ Éléments présents :**")
+            for element, present in elements_presents.items():
+                if present:
+                    st.markdown(f"✓ {element}")
+        
+        with col_check2:
+            score = sum(elements_presents.values())
+            st.metric("Score d'écoute active", f"{score}/4")
+            
+            if score == 4:
+                st.success("🎯 **Excellent !** Votre écoute active est complète.")
+                st.balloons()
+            elif score >= 2:
+                st.info("📈 **Bon travail !** Vous avez capté l'essentiel.")
+            else:
+                st.warning("💪 **À améliorer** : Essayez d'inclure plus d'éléments d'écoute active.")
+        
+        # Feedback spécifique
+        if not elements_presents["Reformulation"]:
+            st.info("💡 **Astuce :** Commencez par 'Si je comprends bien...' ou 'Tu veux dire que...'")
+        if not elements_presents["Validation émotionnelle"]:
+            st.info("💡 **Astuce :** Ajoutez 'Tu dois te sentir...' ou 'C'est difficile quand...'")
+        if not elements_presents["Question ouverte"]:
+            st.info("💡 **Astuce :** Terminez par une question comme 'C'est bien ça ?'")
+    
+    # Exercice de miroir émotionnel
+    st.markdown("### 🎭 Exercice : Le miroir émotionnel")
+    
+    emotions_scenarios = [
+        ("Frustration", "Tout ce que j'essaie de faire échoue. Rien ne fonctionne comme je le veux."),
+        ("Anxiété", "Je ne cesse de penser à tout ce qui pourrait mal tourner demain."),
+        ("Découragement", "J'ai l'impression de courir après rien. Mes efforts ne donnent aucun résultat."),
+        ("Colère", "On ne m'écoute jamais ! Mes opinions ne comptent pour personne ici."),
+        ("Tristesse", "Je me sens tellement seul dans tout ça. Personne ne semble comprendre.")
+    ]
+    
+    selected_emotion = st.selectbox(
+        "**Identifiez l'émotion dominante :**",
+        [e[0] for e in emotions_scenarios],
+        key="emotion_select"
+    )
+    
+    # Trouver le message correspondant
+    message_emotion = next((msg for emo, msg in emotions_scenarios if emo == selected_emotion), "")
+    
+    if message_emotion:
+        st.markdown(
+            f'<div style="'
+            'background: #f0f9ff;'
+            'padding: 1.5rem;'
+            'border-radius: 10px;'
+            'margin-top: 1rem;'
+            '">'
+            f'<p style="color: #334155; margin: 0; font-style: italic;">"{message_emotion}"</p>'
+            '</div>',
+            unsafe_allow_html=True
+        )
+        
+        validation_emotion = st.text_area(
+            "**Validez cette émotion :**",
+            key="validation_emotion",
+            height=100,
+            placeholder=f"Ex: Je comprends que tu te sentes {selected_emotion.lower()} parce que..."
+        )
+        
+        if validation_emotion and selected_emotion.lower() in validation_emotion.lower():
+            st.success(f"✅ Parfait ! Vous avez bien identifié et validé l'émotion de {selected_emotion.lower()}.")
+    
+    # Techniques d'écoute active
+    st.markdown("### 💡 Techniques d'écoute active")
+    
+    col_tech1, col_tech2, col_tech3 = st.columns(3)
+    
+    with col_tech1:
+        st.markdown(
+            '<div style="'
+            'background: #d1fae5;'
+            'padding: 1.5rem;'
+            'border-radius: 10px;'
+            'text-align: center;'
+            '">'
+            '<div style="font-size: 2rem; color: #10b981;">🔄</div>'
+            '<h5 style="color: #065f46;">Reformulation</h5>'
+            '<p style="color: #334155; font-size: 0.9rem;">'
+            '"Si je comprends bien..."<br>'
+            '"Donc ce que tu dis c\'est..."'
+            '</p>'
+            '</div>',
+            unsafe_allow_html=True
+        )
+    
+    with col_tech2:
+        st.markdown(
+            '<div style="'
+            'background: #dbeafe;'
+            'padding: 1.5rem;'
+            'border-radius: 10px;'
+            'text-align: center;'
+            '">'
+            '<div style="font-size: 2rem; color: #3b82f6;">❓</div>'
+            '<h5 style="color: #1d4ed8;">Questionnement</h5>'
+            '<p style="color: #334155; font-size: 0.9rem;">'
+            '"Peux-tu me dire plus sur..."<br>'
+            '"Comment as-tu ressenti cela ?"'
+            '</p>'
+            '</div>',
+            unsafe_allow_html=True
+        )
+    
+    with col_tech3:
+        st.markdown(
+            '<div style="'
+            'background: #fef3c7;'
+            'padding: 1.5rem;'
+            'border-radius: 10px;'
+            'text-align: center;'
+            '">'
+            '<div style="font-size: 2rem; color: #f59e0b;">💬</div>'
+            '<h5 style="color: #92400e;">Validation</h5>'
+            '<p style="color: #334155; font-size: 0.9rem;">'
+            '"Je comprends que c\'est difficile..."<br>'
+            '"C\'est normal de se sentir ainsi..."'
+            '</p>'
+            '</div>',
+            unsafe_allow_html=True
+        )
+    
+    # Quiz d'écoute active
+    st.markdown("### 🧠 Quiz : Vrai ou Faux ?")
+    
+    quiz_questions = [
+        ("L'écoute active signifie simplement ne pas parler pendant que l'autre parle.", "Faux", "L'écoute active implique une attention complète, la reformulation et la validation émotionnelle."),
+        ("Reformuler avec ses propres mots montre qu'on a bien compris.", "Vrai", "La reformulation démontre une compréhension profonde du message."),
+        ("Il faut toujours donner des conseils immédiatement quand quelqu'un partage un problème.", "Faux", "Parfois, la meilleure aide est d'écouter sans donner de conseils."),
+        ("Le langage corporel fait partie de l'écoute active.", "Vrai", "Le contact visuel, les hochements de tête montrent l'attention."),
+        ("Interrompre pour montrer qu'on comprend est une bonne technique.", "Faux", "Il vaut mieux attendre que l'autre ait fini de parler.")
+    ]
+    
+    score_quiz = 0
+    
+    for i, (question, reponse, explication) in enumerate(quiz_questions):
+        col_q1, col_q2 = st.columns([3, 1])
+        
+        with col_q1:
+            st.markdown(f"**{i+1}. {question}**")
+        
+        with col_q2:
+            user_answer = st.selectbox(
+                f"Réponse {i+1}",
+                ["", "Vrai", "Faux"],
+                key=f"quiz_{i}",
+                label_visibility="collapsed"
+            )
+            
+            if user_answer == reponse:
+                score_quiz += 1
+                if user_answer:  # Si une réponse a été donnée
+                    st.success("✓")
+            elif user_answer and user_answer != reponse:
+                st.error("✗")
+    
+    if score_quiz > 0:
+        st.markdown(f"**Score : {score_quiz}/{len(quiz_questions)}**")
+        if score_quiz == len(quiz_questions):
+            st.success("🎉 Excellent ! Vous maîtrisez les concepts de l'écoute active.")
+        elif score_quiz >= len(quiz_questions) // 2:
+            st.info("📚 Bonnes connaissances ! Continuez à pratiquer.")
+        else:
+            st.warning("📖 Revoyez les techniques d'écoute active.")
+    
+    st.markdown("---")
+    
+    # Bénéfices de l'écoute active
+    with st.expander("🌟 Les bénéfices de l'écoute active"):
+        col_benefits1, col_benefits2 = st.columns(2)
+        
+        with col_benefits1:
+            st.markdown(
+                '''
+                **🤝 Relations améliorées :**
+                • Crée la confiance et le respect
+                • Renforce les liens personnels et professionnels
+                • Réduit les malentendus et conflits
+                
+                **🧠 Compréhension approfondie :**
+                • Capture les besoins réels
+                • Identifie les émotions sous-jacentes
+                • Permet des réponses plus adaptées
+                '''
+            )
+        
+        with col_benefits2:
+            st.markdown(
+                '''
+                **💼 Avantages professionnels :**
+                • Meilleure collaboration en équipe
+                • Résolution efficace des problèmes
+                • Leadership plus empathique
+                
+                **😌 Bien-être personnel :**
+                • Réduction du stress relationnel
+                • Sentiment de connexion authentique
+                • Développement de l'intelligence émotionnelle
+                '''
+            )
 
 def conclusion_section() -> None:
     """Section Conclusion - Version enrichie"""
@@ -3573,6 +4890,8 @@ def main():
     load_custom_css()
     
     # Initialisation de l'état de session
+    init_session_state()  # <-- AJOUTER CETTE LIGNE
+    
     if 'pause' not in st.session_state:
         st.session_state.pause = False
     
